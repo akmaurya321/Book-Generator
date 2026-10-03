@@ -103,6 +103,13 @@ public class SecurityConfig {
                             "/api/v1/marketplace/*/download/*"
                     ).permitAll();
                     auth.requestMatchers("/api/v1/marketplace/**").authenticated();
+                    auth.requestMatchers(
+                            HttpMethod.GET,
+                            "/api/v1/templates",
+                            "/api/v1/templates/*",
+                            "/api/v1/templates/*/preview/*"
+                    ).permitAll();
+                    auth.requestMatchers("/api/v1/admin/**", "/api/v1/template-submissions/**").authenticated();
 
                             auth.requestMatchers(
                                     "/api/auth/avatar",

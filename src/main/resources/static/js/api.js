@@ -52,6 +52,11 @@ export const api = {
       const form = new FormData(); form.append('field', field); form.append('image', file);
       return request(`/api/documentation/${encodeURIComponent(jobId)}/assets/front-matter`, { method: 'POST', body: form });
     },
+    uploadPrivateTemplateFormat: (jobId, file) => {
+      const form = new FormData();
+      form.append("template", file);
+      return request(`/api/documentation/${encodeURIComponent(jobId)}/private-template-format`, { method: "POST", body: form });
+    },
     uploadImage: (jobId, sectionId, file, caption) => {
       const form = new FormData(); form.append('sectionId', sectionId); form.append('image', file);
       if (caption) form.append('caption', caption);
@@ -100,6 +105,31 @@ export const api = {
       method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ approve: false, reason }),
     }),
     downloadUrl: (slug, kind) => `/api/v1/marketplace/${encodeURIComponent(slug)}/download/${kind}`,
+  },
+  templates: {
+    search: ({ query = "", country = "", state = "", department = "", degree = "", projectType = "", page = 0, size = 20 } = {}) => {
+      const params = new URLSearchParams({ query, country, state, department, degree, projectType, page: String(page), size: String(size) });
+      return request(`/api/v1/templates?${params}`, { cache: "no-store" });
+    },
+    get: (templateId, version) => {
+      const suffix = version == null ? "" : `?version=${encodeURIComponent(version)}`;
+      return request(`/api/v1/templates/${encodeURIComponent(templateId)}${suffix}`, { cache: "no-store" });
+    },
+    mySubmissions: () => request("/api/v1/template-submissions/my", { cache: "no-store" }),
+    submit: form => request("/api/v1/template-submissions", { method: "POST", body: form }),
+    adminList: ({ status = "", query = "" } = {}) => {
+      const params = new URLSearchParams({ status, query });
+      return request(`/api/v1/admin/templates?${params}`, { cache: "no-store" });
+    },
+    create: form => request("/api/v1/admin/templates", { method: "POST", body: form }),
+    createVersion: (templateId, form) => request(`/api/v1/admin/templates/${encodeURIComponent(templateId)}/versions`, { method: "POST", body: form }),
+    approve: id => request(`/api/v1/admin/templates/${encodeURIComponent(id)}/approve`, { method: "POST" }),
+    reject: (id, reason) => request(`/api/v1/admin/templates/${encodeURIComponent(id)}/reject?reason=${encodeURIComponent(reason)}`, { method: "POST" }),
+    publish: id => request(`/api/v1/admin/templates/${encodeURIComponent(id)}/publish`, { method: "POST" }),
+    suspend: (id, reason) => request(`/api/v1/admin/templates/${encodeURIComponent(id)}/suspend?reason=${encodeURIComponent(reason)}`, { method: "POST" }),
+    archive: (id, reason = "") => request(`/api/v1/admin/templates/${encodeURIComponent(id)}/archive?reason=${encodeURIComponent(reason)}`, { method: "POST" }),
+    audit: id => request(`/api/v1/admin/templates/${encodeURIComponent(id)}/audit`, { cache: "no-store" }),
+    sourceUrl: id => `/api/v1/admin/templates/${encodeURIComponent(id)}/source`,
   },
 };
 

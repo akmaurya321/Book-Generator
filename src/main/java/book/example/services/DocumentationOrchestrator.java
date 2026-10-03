@@ -5,6 +5,7 @@ import book.example.Entity.DocumentationJob;
 import book.example.Repository.JobRepository;
 import book.example.dto.DocumentationPlan;
 import book.example.dto.DocumentationResponse;
+import book.example.dto.DocumentFormatDefinition;
 import book.example.dto.GenerateDocumentationRequest;
 import book.example.dto.GeneratedDocumentation;
 import book.example.dto.ProjectAnalysisResponse;
@@ -31,6 +32,7 @@ import java.util.zip.ZipFile;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -56,6 +58,9 @@ public class DocumentationOrchestrator {
     private final TemporaryChromaManager temporaryChromaManager;
     private final DocumentationJobRunner documentationJobRunner;
     private final StudentContextSuggestionService studentContextSuggestionService;
+    private final TemplateLibraryService templateLibraryService;
+    private final TemplateFileStorageService templateFileStorageService;
+    private final FormatAnalyzer formatAnalyzer;
 
     @Value("${app.storage.retention-days:30}")
     private int storageRetentionDays;
@@ -74,7 +79,10 @@ public class DocumentationOrchestrator {
             TemporaryChromaManager temporaryChromaManager,
             UsageLedgerService usageLedgerService,
             @Lazy DocumentationJobRunner documentationJobRunner,
-            StudentContextSuggestionService studentContextSuggestionService) {
+            StudentContextSuggestionService studentContextSuggestionService,
+            TemplateLibraryService templateLibraryService,
+            TemplateFileStorageService templateFileStorageService,
+            FormatAnalyzer formatAnalyzer) {
         this.jobRepository = jobRepository;
         this.gitHubService = gitHubService;
         this.projectAnalyzer = projectAnalyzer;
@@ -88,6 +96,9 @@ public class DocumentationOrchestrator {
         this.usageLedgerService = usageLedgerService;
         this.documentationJobRunner = documentationJobRunner;
         this.studentContextSuggestionService = studentContextSuggestionService;
+        this.templateLibraryService = templateLibraryService;
+        this.templateFileStorageService = templateFileStorageService;
+        this.formatAnalyzer = formatAnalyzer;
     }
 
     public ProjectAnalysisResponse analyzeProject(String githubUrl, String projectName,
@@ -313,6 +324,7 @@ public class DocumentationOrchestrator {
         if (job.getProjectFactsJson() == null) {
             throw new IllegalStateException("Project analysis is not available yet.");
         }
+
         ProjectFacts facts = readProjectFacts(job);
         var recommendations = sectionRecommendationService.recommend(jobId, facts, globalTemplateService.definitions());
         ProjectAnalysisResponse response = new ProjectAnalysisResponse(jobId, GlobalTemplateService.TEMPLATE_ID,
@@ -320,6 +332,28 @@ public class DocumentationOrchestrator {
         response.setIndexingPartial(!readIndexingFailures(job).isEmpty());
         response.setFailedIndexingChunks(readIndexingFailures(job).size());
         return response;
+    }
+
+    public Map<String, Object> analyzePrivateTemplateFormat(
+            String jobId, UUID ownerId, MultipartFile upload) {
+        DocumentationJob job = jobRepository.findByJobIdAndOwnerId(jobId, ownerId)
+                .orElseThrow(() -> new IllegalArgumentException("Documentation job not found."));
+        if (!Set.of("WAITING_FOR_USER_CONFIGURATION", "INDEXING_PROJECT", "WAITING_FOR_INDEXING")
+                .contains(job.getStatus())) {
+            throw new IllegalStateException("A private format can only be added before generation starts.");
+        }
+        FormatAnalyzer.Analysis analysis = templateFileStorageService.analyzePrivate(upload, formatAnalyzer);
+        validateResolvedFormat(analysis.format());
+        try {
+            job.setPrivateTemplateFormatJson(OBJECT_MAPPER.writeValueAsString(analysis.format()));
+            jobRepository.save(job);
+            return Map.of(
+                    "formatSchema", analysis.format(),
+                    "analysisMetadata", analysis.properties(),
+                    "message", "Private format analyzed for this project only.");
+        } catch (Exception exception) {
+            throw new IllegalStateException("The private format could not be saved for this project.", exception);
+        }
     }
 
     public DocumentationResponse startFinalGeneration(String jobId, UUID ownerId, GenerateDocumentationRequest request) {
@@ -338,6 +372,9 @@ public class DocumentationOrchestrator {
                 || "WAITING_FOR_INDEXING".equals(job.getStatus());
         if (!globalTemplateService.isSupportedTemplateId(request.getTemplateId())) {
             throw new IllegalArgumentException("Unsupported documentation template: " + request.getTemplateId());
+        }
+        if (request.isUsePrivateFormat() && request.getLibraryTemplateId() != null) {
+            throw new IllegalArgumentException("Choose either a published template or a private format.");
         }
         validateStudentDetails(request.getStudentDetails());
         if (request.getSelectedSections() == null || request.getSelectedSections().size() > 100) {
@@ -367,6 +404,7 @@ public class DocumentationOrchestrator {
         plan.setStudentContext(request.getStudentContext());
         plan.setTemplateId(request.getTemplateId());
         globalTemplateService.applyTemplateVariant(plan, request.getTemplateId());
+        applyRequestedTemplate(job, plan, request);
         Set<String> currentIndexFailures = readIndexingFailures(job);
         boolean indexingIncomplete = indexingInProgress || !currentIndexFailures.isEmpty();
         plan.setProjectEvidencePartial(!currentIndexFailures.isEmpty());
@@ -384,6 +422,7 @@ public class DocumentationOrchestrator {
                 if (!currentIndexFailures.isEmpty()) {
                     documentationJobRunner.retryFailedIndexing(jobId);
                 }
+
                 return new DocumentationResponse(jobId, "WAITING_FOR_INDEXING",
                         "Your configuration is saved. Generation will start automatically after all project files are embedded and indexed.");
             }
@@ -414,6 +453,77 @@ public class DocumentationOrchestrator {
                 jobRepository.save(job);
             }
             throw new IllegalStateException("Unable to start final document generation.", e);
+        }
+    }
+
+    private void applyRequestedTemplate(
+            DocumentationJob job, DocumentationPlan plan, GenerateDocumentationRequest request) {
+        if (request.isUsePrivateFormat()) {
+            if (job.getPrivateTemplateFormatJson() == null || job.getPrivateTemplateFormatJson().isBlank()) {
+                throw new IllegalArgumentException("Upload a private DOCX or PDF format before selecting it.");
+            }
+            try {
+                DocumentFormatDefinition format = OBJECT_MAPPER.readValue(
+                        job.getPrivateTemplateFormatJson(), DocumentFormatDefinition.class);
+                validateResolvedFormat(format);
+                plan.setFormat(format);
+                job.setTemplateId("private-upload");
+                job.setTemplateVersion(null);
+                job.setTemplateFormatSnapshotJson(job.getPrivateTemplateFormatJson());
+                Map<String, Object> frontPage = new LinkedHashMap<>();
+                frontPage.put("source", "PRIVATE_UPLOAD");
+                frontPage.put("studentDetails", request.getStudentDetails());
+                job.setTemplateFrontPageSnapshotJson(OBJECT_MAPPER.writeValueAsString(frontPage));
+            } catch (Exception exception) {
+                throw new IllegalStateException("The private template format could not be applied.", exception);
+            }
+            return;
+        }
+        if (request.getLibraryTemplateId() == null || request.getLibraryTemplateId().isBlank()) {
+            job.setPrivateTemplateFormatJson(null);
+            return;
+        }
+        job.setPrivateTemplateFormatJson(null);
+        if (request.getLibraryTemplateVersion() == null || request.getLibraryTemplateVersion() < 1) {
+            throw new IllegalArgumentException("Select a valid published template version.");
+        }
+        var selected = templateLibraryService.published(
+                request.getLibraryTemplateId().trim(), request.getLibraryTemplateVersion());
+        try {
+            DocumentFormatDefinition format = OBJECT_MAPPER.convertValue(
+                    selected.formatSchema(), DocumentFormatDefinition.class);
+            validateResolvedFormat(format);
+            plan.setFormat(format);
+            job.setTemplateId(selected.templateId());
+            job.setTemplateVersion(selected.version());
+            job.setTemplateFormatSnapshotJson(OBJECT_MAPPER.writeValueAsString(format));
+            Map<String, Object> frontPage = new LinkedHashMap<>();
+            frontPage.put("templateConfig", OBJECT_MAPPER.readTree(selected.frontPageConfig()));
+            frontPage.put("studentDetails", request.getStudentDetails());
+            job.setTemplateFrontPageSnapshotJson(OBJECT_MAPPER.writeValueAsString(frontPage));
+        } catch (Exception exception) {
+            throw new IllegalStateException("The published template format could not be applied.", exception);
+        }
+    }
+
+    private void validateResolvedFormat(DocumentFormatDefinition format) {
+        if (format == null
+                || !Set.of("A4", "LETTER", "LEGAL", "A3", "A5").contains(format.getPageSize())
+                || !Set.of("PORTRAIT", "LANDSCAPE").contains(format.getOrientation())
+                || format.getDefaultFont() == null || format.getDefaultFont().isBlank()
+                || format.getDefaultFont().length() > 100
+                || format.getDefaultFontSize() < 8 || format.getDefaultFontSize() > 24
+                || format.getTitleFontSize() < 12 || format.getTitleFontSize() > 40
+                || format.getHeading1FontSize() < 10 || format.getHeading1FontSize() > 30
+                || format.getHeading2FontSize() < 9 || format.getHeading2FontSize() > 26
+                || format.getHeading3FontSize() < 8 || format.getHeading3FontSize() > 24
+                || format.getMarginTopTwips() < 360 || format.getMarginTopTwips() > 3600
+                || format.getMarginBottomTwips() < 360 || format.getMarginBottomTwips() > 3600
+                || format.getMarginLeftTwips() < 360 || format.getMarginLeftTwips() > 3600
+                || format.getMarginRightTwips() < 360 || format.getMarginRightTwips() > 3600
+                || !Double.isFinite(format.getLineSpacing())
+                || format.getLineSpacing() < 1 || format.getLineSpacing() > 3) {
+            throw new IllegalArgumentException("The selected template contains unsupported formatting values.");
         }
     }
 

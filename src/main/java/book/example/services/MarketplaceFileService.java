@@ -67,7 +67,16 @@ public class MarketplaceFileService {
 
     public Path storeDocument(UUID listingId, MultipartFile upload) {
         byte[] bytes = readUpload(upload, "PDF or DOCX");
-        String filename = safeFilename(upload.getOriginalFilename());
+        String extension = inspectDocument(bytes, safeFilename(upload.getOriginalFilename()));
+        return persist(listingId, "documentation" + extension, bytes);
+    }
+
+    public String validateDocumentUpload(MultipartFile upload) {
+        byte[] bytes = readUpload(upload, "PDF or DOCX");
+        return inspectDocument(bytes, safeFilename(upload.getOriginalFilename()));
+    }
+
+    private String inspectDocument(byte[] bytes, String filename) {
         String extension = extension(filename);
         if (extension.equals(".pdf")) {
             if (!startsWith(bytes, "%PDF-".getBytes(StandardCharsets.US_ASCII))) {
@@ -79,8 +88,15 @@ public class MarketplaceFileService {
         } else {
             throw new IllegalArgumentException("Documentation must be a PDF or DOCX file.");
         }
+        return extension;
+    }
 
-        return persist(listingId, "documentation" + extension, bytes);
+    public String safeDocumentExtension(String originalFilename) {
+        String extension = extension(safeFilename(originalFilename));
+        if (!Set.of(".pdf", ".docx").contains(extension)) {
+            throw new IllegalArgumentException("Template documents must be PDF or DOCX.");
+        }
+        return extension;
     }
 
     private void inspectPdf(byte[] bytes, String filename) {

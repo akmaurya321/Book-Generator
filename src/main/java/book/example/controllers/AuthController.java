@@ -221,7 +221,7 @@ public class AuthController {
     public record RegisterRequest(
             @NotBlank @Email @Size(max = 254) String email,
             @NotBlank @Size(min = 2, max = 80) String name,
-            @NotBlank @Size(min = 12, max = 72) String password) {
+            @NotBlank @Size(min = 6, max = 72) String password) {
     }
 
     public record LoginRequest(
@@ -235,7 +235,7 @@ public class AuthController {
 
         public record ResetPasswordRequest(
             @NotBlank String token,
-            @NotBlank @Size(min = 12, max = 72) String password) {
+            @NotBlank @Size(min = 6, max = 72) String password) {
         }
 
     public record UsageRecord(String jobId, String operation, int units,

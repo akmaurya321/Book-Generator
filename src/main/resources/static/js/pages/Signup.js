@@ -2,7 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState } from 'react';
 function PasswordStrength({ password }) {
     const checks = [
-        { label: 'At least 12 characters', ok: password.length >= 12 },
+        { label: 'At least 6 characters', ok: password.length >= 6 },
         { label: 'Uppercase letter', ok: /[A-Z]/.test(password) },
         { label: 'Number', ok: /[0-9]/.test(password) },
     ];
@@ -24,6 +24,7 @@ export default function Signup({ onNav, onSignup, onGoogle, googleEnabled }) {
     const handleCreate = async (e) => {
         e.preventDefault();
         if (!name || !email || !password) { setError('Please fill in all fields.'); setLoading(false); return; }
+        if (password.length < 6) { setError('Password must be at least 6 characters.'); setLoading(false); return; }
         setLoading(true); setError('');
         try { await onSignup(email.trim(), name.trim(), password); }
         catch (error) { setError(error.message || 'Unable to create account.'); }

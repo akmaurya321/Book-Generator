@@ -112,6 +112,21 @@ public class DocumentationFileController {
         }
     }
 
+    @PostMapping(value = "/{jobId}/private-template-format", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadPrivateTemplateFormat(
+            @AuthenticationPrincipal AppUser authenticatedUser,
+            @PathVariable String jobId,
+            @RequestParam("template") MultipartFile template) {
+        try {
+            return ResponseEntity.ok(documentationOrchestrator.analyzePrivateTemplateFormat(
+                    jobId, authenticatedUser.getId(), template));
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(Map.of("message", exception.getMessage()));
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", exception.getMessage()));
+        }
+    }
+
     @GetMapping("/jobs")
     public ResponseEntity<?> listJobs(
             @AuthenticationPrincipal AppUser authenticatedUser) {

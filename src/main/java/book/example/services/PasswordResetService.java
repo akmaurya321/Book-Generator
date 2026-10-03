@@ -102,9 +102,9 @@ public class PasswordResetService {
     }
 
     private void validatePassword(String password) {
-        if (password == null || password.length() < 12
+        if (password == null || password.length() < 6
                 || password.getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new IllegalArgumentException("Password must be 12 or more characters and at most 72 UTF-8 bytes.");
+            throw new IllegalArgumentException("Password must be 6 or more characters and at most 72 UTF-8 bytes.");
         }
     }
 

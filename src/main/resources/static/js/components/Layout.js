@@ -109,6 +109,12 @@ export default function Layout({ page, state, onNav, onLogout, children }) {
 
   const user = state.user || { name: "Account", email: "" };
   const initial = user.name?.slice(0, 1)?.toUpperCase() || "A";
+  const secondaryItems = [
+    ...SECONDARY_ITEMS,
+    ...(user.roles?.includes("ROLE_ADMIN")
+      ? [{ page: "template-admin", label: "Template Admin", icon: "M12 3v18M3 12h18M5 5l14 14M19 5L5 19" }]
+      : []),
+  ];
 
   return _jsxs("div", {
     className: `app-shell${sidebarOpen ? " sidebar-is-open" : " sidebar-is-closed"}${collapsed ? " sidebar-is-collapsed" : ""}`,
@@ -199,7 +205,7 @@ export default function Layout({ page, state, onNav, onLogout, children }) {
                 className: "sidebar-group-label sidebar-label",
                 children: "Account",
               }),
-              SECONDARY_ITEMS.map((item) =>
+              secondaryItems.map((item) =>
                 _jsx(
                   NavButton,
                   {

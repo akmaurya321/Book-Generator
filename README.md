@@ -28,6 +28,10 @@ Configure `.env` from `.env.example`, start the required services, then run `./m
 
 For production, use the `prod` profile and provide all required secrets through environment variables.
 
+### Initial administrator login
+
+To create the first admin account, set `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` in the private `.env` file (or deployment environment), then restart the application. Passwords must contain at least 6 characters and be at most 72 UTF-8 bytes. `ADMIN_BOOTSTRAP_NAME` is optional. The bootstrap creates the account if it does not exist, or grants `ROLE_ADMIN` to the matching account without replacing an existing password. After restarting, sign in through the regular login page and open `/#template-admin` or select **Template Admin** in the sidebar. Leave both bootstrap credentials unset after provisioning if you do not want startup to grant admin access to that account again.
+
 ## Free Marketplace
 
 Open `/#marketplace` to browse published resources without signing in. Signed-in users can submit a project ZIP, PDF, or DOCX for review, manage their listings, and submit completed DocGen documentation directly from the completion screen. Direct publishing references the generated document rather than asking the user to download and upload it again. The Marketplace includes dedicated `Generated with DocGen AI` and `Community uploads` origin filters.

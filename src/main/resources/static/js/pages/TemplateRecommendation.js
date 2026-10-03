@@ -44,6 +44,47 @@ export default function TemplateRecommendation({ onNav, state, onState }) {
           }),
         ],
       }),
+      _jsxs("div", {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 14,
+          flexWrap: "wrap",
+          padding: 16,
+          marginBottom: 18,
+          background: "#F8FAFC",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+        },
+        children: [
+          _jsxs("div", {
+            children: [
+              _jsx("strong", { children: state.selectedCatalogTemplate?.college || "College Template Library" }),
+              _jsx("div", {
+                style: { color: "var(--text-secondary)", fontSize: 12, marginTop: 3 },
+                children: state.selectedCatalogTemplate
+                  ? `Selected published version ${state.selectedCatalogTemplate.version}`
+                  : "Choose an optional published college format or analyze a private format for this project.",
+              }),
+            ],
+          }),
+          _jsx("button", {
+            type: "button",
+            onClick: () => onNav("templates"),
+            style: {
+              padding: "9px 13px",
+              background: "white",
+              color: "var(--primary)",
+              border: "1px solid var(--primary)",
+              borderRadius: 8,
+              fontWeight: 700,
+              cursor: "pointer",
+            },
+            children: "Browse Template Library",
+          }),
+        ],
+      }),
       template
         ? _jsxs("div", {
             onClick: () => setSelected(template.id),

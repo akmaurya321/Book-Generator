@@ -8,6 +8,9 @@ import java.util.Map;
 public class GenerateDocumentationRequest {
 
     private String templateId = "global_student_project_v1";
+    private String libraryTemplateId;
+    private Integer libraryTemplateVersion;
+    private boolean usePrivateFormat;
     private List<String> selectedSections = new ArrayList<>();
     private List<String> selectedDiagrams = new ArrayList<>();
     private List<SectionConfiguration> sectionConfigurations = new ArrayList<>();
@@ -23,6 +26,13 @@ public class GenerateDocumentationRequest {
     public void setTemplateId(String templateId) {
         this.templateId = templateId;
     }
+
+    public String getLibraryTemplateId() { return libraryTemplateId; }
+    public void setLibraryTemplateId(String value) { this.libraryTemplateId = value; }
+    public Integer getLibraryTemplateVersion() { return libraryTemplateVersion; }
+    public void setLibraryTemplateVersion(Integer value) { this.libraryTemplateVersion = value; }
+    public boolean isUsePrivateFormat() { return usePrivateFormat; }
+    public void setUsePrivateFormat(boolean value) { this.usePrivateFormat = value; }
 
     public List<String> getSelectedSections() {
         return selectedSections;

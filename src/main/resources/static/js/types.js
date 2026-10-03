@@ -12,6 +12,7 @@ export const defaultAdditionalContext = {
 export const defaultState = {
   user: null, projectName: '', projectType: '', githubUrl: '', projectFile: null, technologies: [], frameworks: [],
   totalFiles: 0, sourceFiles: 0, componentCount: 0, selectedTemplate: '', selectedTemplateId: '', template: null,
+  selectedCatalogTemplateId: '', selectedCatalogTemplateVersion: null, selectedCatalogTemplate: null, usePrivateFormat: false,
   templates: [], sections: [], studentInfo: defaultStudentInfo, additionalContext: defaultAdditionalContext,
   contextSuggestions: null, additionalInformation: {}, outputFormats: ['pdf', 'docx'], currentProjectId: null,
   jobs: [], usageCount: 0, usageSummary: null, usageActivity: [], analysis: null, analysisStatus: null, analysisProgress: 0,

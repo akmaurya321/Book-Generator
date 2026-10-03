@@ -147,6 +147,14 @@ class AuthSecurityTest {
     }
 
     @Test
+    void sixCharacterPasswordCanRegisterAndAuthenticate() {
+        String email = "six-character-password@example.test";
+        String password = "sixsix";
+        userService.registerLocalUser(email, "Six Character Password", password);
+        assertThat(userService.authenticateLocalUser(email, password)).isPresent();
+    }
+
+    @Test
     void authenticatedUserCanUploadAndReadProfileAvatar() throws Exception {
         String email = "avatar-test@example.test";
         String password = "a-long-test-password-123";

@@ -29,6 +29,7 @@ import DocumentEditor from "./pages/DocumentEditor.js";
 import MyProjects from "./pages/MyProjects.js";
 import ProjectDetails from "./pages/ProjectDetails.js";
 import Templates from "./pages/Templates.js";
+import TemplateAdmin from "./pages/TemplateAdmin.js";
 import Settings from "./pages/Settings.js";
 import Help from "./pages/Help.js";
 import Marketplace from "./pages/Marketplace.js";
@@ -57,6 +58,7 @@ const ROUTES = new Set([
   "my-projects",
   "project-details",
   "templates",
+  "template-admin",
   "settings",
   "help",
   "marketplace",
@@ -827,6 +829,9 @@ function AppInner() {
     const payload = {
       templateId:
         s.selectedTemplateId || s.analysis?.templateId || s.template?.id,
+      libraryTemplateId: s.usePrivateFormat ? null : (s.selectedCatalogTemplateId || null),
+      libraryTemplateVersion: s.usePrivateFormat ? null : (s.selectedCatalogTemplateVersion || null),
+      usePrivateFormat: s.usePrivateFormat === true,
       selectedSections,
       selectedDiagrams,
       sectionConfigurations,
@@ -1114,7 +1119,9 @@ function AppInner() {
       case "document-editor":
         return _jsx(DocumentEditor, { onNav: setPage, state: appState });
       case "templates":
-        return _jsx(Templates, { onNav: setPage, state: appState });
+        return _jsx(Templates, { onNav: setPage, state: appState, onState });
+      case "template-admin":
+        return _jsx(TemplateAdmin, { onNav: setPage, state: appState });
       case "settings":
         return _jsx(Settings, {
           onNav: setPage,

@@ -57,6 +57,21 @@ public class DocumentationJob {
     @Column(name = "plan_json", columnDefinition = "TEXT")
     private String planJson;
 
+    @Column(name = "template_id", length = 180)
+    private String templateId;
+
+    @Column(name = "template_version")
+    private Integer templateVersion;
+
+    @Column(name = "template_format_snapshot_json", columnDefinition = "TEXT")
+    private String templateFormatSnapshotJson;
+
+    @Column(name = "template_front_page_snapshot_json", columnDefinition = "TEXT")
+    private String templateFrontPageSnapshotJson;
+
+    @Column(name = "private_template_format_json", columnDefinition = "TEXT")
+    private String privateTemplateFormatJson;
+
     @Column(name = "repository_snapshot_json", columnDefinition = "TEXT")
     private String repositorySnapshotJson;
 
@@ -175,6 +190,17 @@ public class DocumentationJob {
     public void setPlanJson(String planJson) {
         this.planJson = planJson;
     }
+
+    public String getTemplateId() { return templateId; }
+    public void setTemplateId(String templateId) { this.templateId = templateId; }
+    public Integer getTemplateVersion() { return templateVersion; }
+    public void setTemplateVersion(Integer templateVersion) { this.templateVersion = templateVersion; }
+    public String getTemplateFormatSnapshotJson() { return templateFormatSnapshotJson; }
+    public void setTemplateFormatSnapshotJson(String value) { this.templateFormatSnapshotJson = value; }
+    public String getTemplateFrontPageSnapshotJson() { return templateFrontPageSnapshotJson; }
+    public void setTemplateFrontPageSnapshotJson(String value) { this.templateFrontPageSnapshotJson = value; }
+    public String getPrivateTemplateFormatJson() { return privateTemplateFormatJson; }
+    public void setPrivateTemplateFormatJson(String value) { this.privateTemplateFormatJson = value; }
 
     public String getRepositorySnapshotJson() {
         return repositorySnapshotJson;

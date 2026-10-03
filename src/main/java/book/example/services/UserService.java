@@ -11,6 +11,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class UserService {
@@ -29,13 +31,34 @@ public class UserService {
         if (userRepository.findByEmail(normalizedEmail).isPresent()) {
             throw new IllegalStateException("An account with this email already exists.");
         }
-        if (password == null || password.length() < 12 ||
+        if (password == null || password.length() < 6 ||
                 password.getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new IllegalArgumentException("Password must be 12 or more characters and at most 72 UTF-8 bytes.");
+            throw new IllegalArgumentException("Password must be 6 or more characters and at most 72 UTF-8 bytes.");
         }
 
         AppUser user = new AppUser(normalizedEmail, name.trim(), "local", null, null);
         user.setPasswordHash(passwordEncoder.encode(password));
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public AppUser bootstrapAdmin(String email, String name, String password) {
+        String normalizedEmail = normalizeEmail(email);
+        validatePassword(password);
+        AppUser user = userRepository.findByEmail(normalizedEmail).orElseGet(() -> {
+            String normalizedName = name == null || name.isBlank() ? "Administrator" : name.trim();
+            AppUser created = new AppUser(normalizedEmail, normalizedName, "local", null, null);
+            created.setPasswordHash(passwordEncoder.encode(password));
+            return created;
+        });
+        Set<String> roles = new HashSet<>(user.getRoles());
+        roles.addAll(Set.of("ROLE_USER", "ROLE_ADMIN"));
+        user.setRoles(roles);
+        user.setRole("ROLE_ADMIN");
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(password));
+        }
+        user.setUpdatedAt(LocalDateTime.now());
         return userRepository.save(user);
     }
 
@@ -86,5 +109,12 @@ public class UserService {
             throw new IllegalArgumentException("Email is required.");
         }
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private void validatePassword(String password) {
+        if (password == null || password.length() < 6 ||
+                password.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("Admin password must be 6 or more characters and at most 72 UTF-8 bytes.");
+        }
     }
 }
