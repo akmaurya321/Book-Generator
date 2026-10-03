@@ -28,6 +28,18 @@ Configure `.env` from `.env.example`, start the required services, then run `./m
 
 For production, use the `prod` profile and provide all required secrets through environment variables.
 
+## Free Marketplace
+
+Open `/#marketplace` to browse published resources without signing in. Signed-in users can submit a project ZIP, PDF, or DOCX for review, manage their listings, and submit completed DocGen documentation directly from the completion screen. Direct publishing references the generated document rather than asking the user to download and upload it again. The Marketplace includes dedicated `Generated with DocGen AI` and `Community uploads` origin filters.
+
+Marketplace API routes are under `/api/v1/marketplace`. Admins with `ROLE_ADMIN` can use the **Review queue** button in the Marketplace header or open `/#marketplace-moderation` to review pending submissions. A moderator approval is required before a seller can publish a listing; only published listings appear in public browse and download endpoints. Uploads require an explicit rights confirmation and are limited to 20 MB per file. Project ZIPs are checked for unsafe paths, nested archives, executable files, private credential filenames, and likely secrets in scanned text. DOCX packages are bounded and inspected for unsafe embedded paths and likely secrets. These checks are not a substitute for antivirus or a malware sandbox.
+
+New submissions stay private while awaiting moderation. A moderator account with `ROLE_ADMIN` can approve or reject a submission; the seller explicitly publishes an approved listing. Only published listings, their bounded document/file-name previews, and their free downloads are public. Uploaded files are stored under the configured storage root and are not served through raw filesystem URLs.
+
+## Post-generation document editor
+
+Completed DOCX jobs can be opened from the completion screen or My Projects. The editor presents the document as selectable pages, generates exactly two AI alternatives for a selected passage and instruction, and applies a chosen alternative to the DOCX. Edits use an atomic document version check, keep private revision snapshots for undo/redo, and update both DOCX and PDF exports. AI editing uses the configured LLM provider; PDF regeneration requires the configured LibreOffice installation.
+
 ## Repository understanding
 
 Project ingestion is content-based, not filename-only. For GitHub URLs and ZIP uploads, the scanner recursively inspects relevant repository files, reads supported text/source/configuration content within safety limits, fingerprints analyzed files with SHA-256, extracts deterministic imports, annotations, classes/functions/method symbols, and indexes the actual file content in Chroma with file/line metadata. Binary/media/model files are retained as factual metadata but are not represented as source code. Generated/vendor/build directories are intentionally excluded. The system does not use an LLM to invent repository facts during analysis.

@@ -1,5 +1,7 @@
 package book.example.dto;
 
+import java.util.Set;
+
 public class AuthUserResponse {
     private final boolean authenticated;
     private final UserSummary user;
@@ -23,13 +25,15 @@ public class AuthUserResponse {
         private final String email;
         private final String provider;
         private final String avatarUrl;
+        private final Set<String> roles;
 
-        public UserSummary(String id, String name, String email, String provider, String avatarUrl) {
+        public UserSummary(String id, String name, String email, String provider, String avatarUrl, Set<String> roles) {
             this.id = id;
             this.name = name;
             this.email = email;
             this.provider = provider;
             this.avatarUrl = avatarUrl;
+            this.roles = Set.copyOf(roles);
         }
 
         public String getId() {
@@ -50,6 +54,10 @@ public class AuthUserResponse {
 
         public String getAvatarUrl() {
             return avatarUrl;
+        }
+
+        public Set<String> getRoles() {
+            return roles;
         }
 
     }

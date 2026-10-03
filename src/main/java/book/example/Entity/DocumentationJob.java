@@ -70,6 +70,15 @@ public class DocumentationJob {
     @Column(name = "indexing_failures_json", columnDefinition = "TEXT")
     private String indexingFailuresJson;
 
+    @Column(nullable = false)
+    private long version;
+
+    @Column(name = "editor_history_json", columnDefinition = "TEXT")
+    private String editorHistoryJson;
+
+    @Column(name = "editor_history_position", nullable = false)
+    private int editorHistoryPosition = -1;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
@@ -189,6 +198,30 @@ public class DocumentationJob {
 
     public void setIndexingFailuresJson(String indexingFailuresJson) {
         this.indexingFailuresJson = indexingFailuresJson;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public void setVersion(long version) {
+        this.version = version;
+    }
+
+    public String getEditorHistoryJson() {
+        return editorHistoryJson;
+    }
+
+    public void setEditorHistoryJson(String editorHistoryJson) {
+        this.editorHistoryJson = editorHistoryJson;
+    }
+
+    public int getEditorHistoryPosition() {
+        return editorHistoryPosition;
+    }
+
+    public void setEditorHistoryPosition(int editorHistoryPosition) {
+        this.editorHistoryPosition = editorHistoryPosition;
     }
 
     public LocalDateTime getCreatedAt() {

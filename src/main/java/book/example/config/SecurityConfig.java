@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -93,6 +94,15 @@ public class SecurityConfig {
                                 "/oauth2/**",
                             "/login/oauth2/**"
                     ).permitAll();
+
+                    auth.requestMatchers(
+                            HttpMethod.GET,
+                            "/api/v1/marketplace",
+                            "/api/v1/marketplace/categories",
+                            "/api/v1/marketplace/*",
+                            "/api/v1/marketplace/*/download/*"
+                    ).permitAll();
+                    auth.requestMatchers("/api/v1/marketplace/**").authenticated();
 
                             auth.requestMatchers(
                                     "/api/auth/avatar",

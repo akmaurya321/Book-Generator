@@ -1,5 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState } from "react";
+import { api } from "../api.js";
 
 function DownloadButton({ label, url }) {
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,33 @@ export default function Completed({ onNav, state }) {
   const title = state.studentInfo?.projectTitle || state.projectName || "Project Documentation";
   const sections = (state.sections || []).filter((section) => section.enabled);
   const job = state.currentProjectId;
+  const [showPublishForm, setShowPublishForm] = useState(false);
+  const [publishValues, setPublishValues] = useState({
+    title,
+    description: "",
+    category: "",
+    technologies: "",
+    ownershipConfirmed: false,
+  });
+  const [publishMessage, setPublishMessage] = useState("");
+  const [publishError, setPublishError] = useState("");
+  const [publishing, setPublishing] = useState(false);
+
+  const publishToMarketplace = async (event) => {
+    event.preventDefault();
+    setPublishing(true);
+    setPublishError("");
+    setPublishMessage("");
+    try {
+      await api.marketplace.publishGenerated(job, publishValues);
+      setPublishMessage("Submitted for Marketplace review. It will be public after moderation.");
+      setShowPublishForm(false);
+    } catch (error) {
+      setPublishError(error.message || "Unable to submit this document.");
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   return _jsxs("div", { className: "completed-page", children: [
     _jsx("div", { className: "completed-success-icon", children: _jsx("svg", {
@@ -70,6 +98,36 @@ export default function Completed({ onNav, state }) {
         className: "completed-view-pdf",
         onClick: () => window.open(`/api/documentation/${encodeURIComponent(job)}/view/pdf`, "_blank", "noopener,noreferrer"),
         children: "View PDF",
+      }),
+      _jsx("button", {
+        type: "button",
+        className: "completed-view-pdf",
+        onClick: () => onNav("document-editor"),
+        children: "Edit Document",
+      }),
+      _jsx("button", {
+        type: "button",
+        className: "completed-view-pdf",
+        onClick: () => setShowPublishForm(value => !value),
+        children: "Publish to Marketplace",
+      }),
+      publishMessage && _jsx("p", { role: "status", children: publishMessage }),
+      publishError && _jsx("p", { role: "alert", style: { color: "#B91C1C" }, children: publishError }),
+      showPublishForm && _jsxs("form", {
+        onSubmit: publishToMarketplace,
+        style: { display: "grid", gap: 10, marginTop: 18, textAlign: "left" },
+        children: [
+          _jsx("h3", { children: "Submit documentation for review" }),
+          _jsx("input", { required: true, maxLength: 180, value: publishValues.title, onChange: event => setPublishValues(value => ({ ...value, title: event.target.value })), placeholder: "Listing title" }),
+          _jsx("textarea", { required: true, maxLength: 5000, value: publishValues.description, onChange: event => setPublishValues(value => ({ ...value, description: event.target.value })), placeholder: "Describe this resource" }),
+          _jsx("input", { required: true, maxLength: 80, value: publishValues.category, onChange: event => setPublishValues(value => ({ ...value, category: event.target.value })), placeholder: "Category" }),
+          _jsx("input", { maxLength: 2000, value: publishValues.technologies, onChange: event => setPublishValues(value => ({ ...value, technologies: event.target.value })), placeholder: "Technologies (optional)" }),
+          _jsxs("label", { style: { display: "flex", gap: 8, alignItems: "flex-start" }, children: [
+            _jsx("input", { type: "checkbox", required: true, checked: publishValues.ownershipConfirmed, onChange: event => setPublishValues(value => ({ ...value, ownershipConfirmed: event.target.checked })) }),
+            "I have permission to distribute this document and it contains no confidential information or third-party personal data.",
+          ] }),
+          _jsx("button", { type: "submit", disabled: publishing, children: publishing ? "Submitting…" : "Submit for review" }),
+        ],
       }),
     ] }),
     _jsxs("div", { className: "completed-actions", children: [

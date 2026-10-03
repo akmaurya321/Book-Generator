@@ -60,6 +60,46 @@ export const api = {
     downloadPdfUrl: jobId => `/api/documentation/${encodeURIComponent(jobId)}/download/pdf`,
     downloadDocxUrl: jobId => `/api/documentation/${encodeURIComponent(jobId)}/download/docx`,
     viewPdfUrl: jobId => `/api/documentation/${encodeURIComponent(jobId)}/view/pdf`,
+    editor: jobId => request(`/api/documentation/${encodeURIComponent(jobId)}/editor`, { cache: 'no-store' }),
+    transformSelection: (jobId, payload) => request(`/api/documentation/${encodeURIComponent(jobId)}/editor/alternatives`, {
+      method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(payload),
+    }),
+    saveEdit: (jobId, payload) => request(`/api/documentation/${encodeURIComponent(jobId)}/editor/save`, {
+      method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(payload),
+    }),
+    undoEdit: (jobId, version) => request(`/api/documentation/${encodeURIComponent(jobId)}/editor/undo`, {
+      method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ version }),
+    }),
+    redoEdit: (jobId, version) => request(`/api/documentation/${encodeURIComponent(jobId)}/editor/redo`, {
+      method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ version }),
+    }),
+  },
+  marketplace: {
+    browse: ({ query = "", category = "", originType = "", page = 0, size = 20 } = {}) => {
+      const params = new URLSearchParams({ query, category, originType, page: String(page), size: String(size) });
+      return request(`/api/v1/marketplace?${params}`, { cache: "no-store" });
+    },
+    categories: () => request("/api/v1/marketplace/categories", { cache: "no-store" }),
+    listing: slug => request(`/api/v1/marketplace/${encodeURIComponent(slug)}`, { cache: "no-store" }),
+    submit: form => request("/api/v1/marketplace/seller/listings", { method: "POST", body: form }),
+    publishGenerated: (jobId, payload) => request(
+      `/api/v1/marketplace/seller/docgen/${encodeURIComponent(jobId)}`,
+      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(payload) },
+    ),
+    ownListings: () => request("/api/v1/marketplace/seller/listings", { cache: "no-store" }),
+    update: (id, payload) => request(`/api/v1/marketplace/seller/listings/${encodeURIComponent(id)}`, {
+      method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(payload),
+    }),
+    publishApproved: id => request(`/api/v1/marketplace/seller/listings/${encodeURIComponent(id)}/publish`, { method: "POST" }),
+    archive: id => request(`/api/v1/marketplace/seller/listings/${encodeURIComponent(id)}/archive`, { method: "POST" }),
+    moderationQueue: () => request("/api/v1/marketplace/moderation/queue", { cache: "no-store" }),
+    moderate: (id, payload) => request(`/api/v1/marketplace/moderation/${encodeURIComponent(id)}/decision`, {
+      method: "POST", headers: JSON_HEADERS, body: JSON.stringify(payload),
+    }),
+    suspend: (id, reason) => request(`/api/v1/marketplace/moderation/${encodeURIComponent(id)}/suspend`, {
+      method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ approve: false, reason }),
+    }),
+    downloadUrl: (slug, kind) => `/api/v1/marketplace/${encodeURIComponent(slug)}/download/${kind}`,
   },
 };
 

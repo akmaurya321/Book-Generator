@@ -106,6 +106,18 @@ export default function MyProjects({ onNav, state, onState }) {
                         children: _jsxs('div', {
                           style: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 },
                           children: [
+                            job.status === 'COMPLETED' && job.hasDocx
+                              ? _jsx('button', {
+                                  type: 'button',
+                                  onClick: event => {
+                                    event.stopPropagation();
+                                    onState?.({ currentProjectId: job.jobId });
+                                    onNav('document-editor');
+                                  },
+                                  style: { ...neutralButton, color: 'var(--primary)' },
+                                  children: 'Edit document',
+                                })
+                              : null,
                             _jsx('button', {
                               type: 'button',
                               onClick: event => {

@@ -2,6 +2,7 @@ package book.example.services;
 
 import book.example.Entity.DocumentationJob;
 import book.example.Repository.JobRepository;
+import book.example.Repository.MarketplaceListingRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -24,13 +25,15 @@ class JobExpirationServiceTest {
 
     private JobRepository jobRepository;
     private TemporaryChromaManager chromaManager;
+    private MarketplaceListingRepository marketplaceListingRepository;
     private JobExpirationService service;
 
     @BeforeEach
     void setUp() {
         jobRepository = mock(JobRepository.class);
         chromaManager = mock(TemporaryChromaManager.class);
-        service = new JobExpirationService(jobRepository, chromaManager);
+        marketplaceListingRepository = mock(MarketplaceListingRepository.class);
+        service = new JobExpirationService(jobRepository, chromaManager, marketplaceListingRepository);
         ReflectionTestUtils.setField(service, "storageRoot", storageRoot.toString());
     }
 
@@ -73,6 +76,23 @@ class JobExpirationServiceTest {
         UUID ownerId = UUID.randomUUID();
         DocumentationJob job = job(jobId, "GENERATING_DOCUMENTATION");
         when(jobRepository.findByJobIdAndOwnerId(jobId, ownerId)).thenReturn(Optional.of(job));
+
+        ResponseStatusException error = assertThrows(
+                ResponseStatusException.class,
+                () -> service.deleteJob(jobId, ownerId));
+
+        assertEquals(409, error.getStatusCode().value());
+        verifyNoInteractions(chromaManager);
+        verify(jobRepository, never()).delete(any());
+    }
+
+    @Test
+    void refusesToDeleteGenerationReferencedByAnUnarchivedMarketplaceListing() {
+        String jobId = UUID.randomUUID().toString();
+        UUID ownerId = UUID.randomUUID();
+        DocumentationJob job = job(jobId, "COMPLETED");
+        when(jobRepository.findByJobIdAndOwnerId(jobId, ownerId)).thenReturn(Optional.of(job));
+        when(marketplaceListingRepository.existsBySourceJobIdAndStatusNot(jobId, "ARCHIVED")).thenReturn(true);
 
         ResponseStatusException error = assertThrows(
                 ResponseStatusException.class,

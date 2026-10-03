@@ -2,6 +2,7 @@ package book.example.services;
 
 import book.example.Entity.DocumentationJob;
 import book.example.Repository.JobRepository;
+import book.example.Repository.MarketplaceListingRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,16 +20,19 @@ public class JobExpirationService {
 
     private final JobRepository jobRepository;
     private final TemporaryChromaManager temporaryChromaManager;
+    private final MarketplaceListingRepository marketplaceListingRepository;
     @Value("${app.storage.root:generated}")
     private String storageRoot;
 
     public JobExpirationService(
             JobRepository jobRepository,
-            TemporaryChromaManager temporaryChromaManager) {
+            TemporaryChromaManager temporaryChromaManager,
+            MarketplaceListingRepository marketplaceListingRepository) {
 
         this.jobRepository = jobRepository;
         this.temporaryChromaManager =
                 temporaryChromaManager;
+        this.marketplaceListingRepository = marketplaceListingRepository;
     }
 
     @Transactional
@@ -44,6 +48,7 @@ public class JobExpirationService {
             // Active jobs are durable until the user explicitly cancels them.
             // Expiration is only an artifact-retention mechanism for terminal jobs.
             if (!isTerminal(job.getStatus())) continue;
+            if (marketplaceListingRepository.existsBySourceJobIdAndStatusNot(job.getJobId(), "ARCHIVED")) continue;
             cleanupJob(job);
         }
     }
@@ -52,6 +57,9 @@ public class JobExpirationService {
     public void deleteJob(String jobId, java.util.UUID ownerId) {
         DocumentationJob job = jobRepository.findByJobIdAndOwnerId(jobId, ownerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Documentation job not found."));
+        if (marketplaceListingRepository.existsBySourceJobIdAndStatusNot(jobId, "ARCHIVED")) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Archive or remove the Marketplace listing before deleting its source project.");
+        }
         if (!isTerminal(job.getStatus()) && !"WAITING_FOR_USER_CONFIGURATION".equals(job.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cancel or wait for this active project before deleting it.");
         }

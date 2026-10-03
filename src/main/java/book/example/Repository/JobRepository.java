@@ -26,6 +26,9 @@ public interface JobRepository
         @Transactional(readOnly = true)
         List<DocumentationJob> findTop50ByOwnerIdOrderByUpdatedAtDesc(UUID ownerId);
 
+        @Transactional(readOnly = true)
+        List<DocumentationJob> findTop50ByOwnerIdAndStatusOrderByUpdatedAtDesc(UUID ownerId, String status);
+
                         @Transactional(readOnly = true)
             List<DocumentationJob> findByStatusInAndUpdatedAtBefore(
                     List<String> statuses, LocalDateTime updatedBefore);
@@ -114,4 +117,20 @@ public interface JobRepository
             "where job.jobId = :jobId and job.ownerId = :ownerId " +
             "and job.status not in ('COMPLETED','FAILED','CANCELLED')")
     int cancelJob(@Param("jobId") String jobId, @Param("ownerId") UUID ownerId, @Param("now") LocalDateTime now);
+
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update DocumentationJob job set job.documentPath = :documentPath, job.pdfPath = :pdfPath, " +
+            "job.editorHistoryJson = :historyJson, job.editorHistoryPosition = :historyPosition, " +
+            "job.version = job.version + 1, job.updatedAt = :now " +
+            "where job.jobId = :jobId and job.ownerId = :ownerId and job.status = 'COMPLETED' " +
+            "and job.version = :expectedVersion")
+    int updateEditorState(@Param("jobId") String jobId,
+                          @Param("ownerId") UUID ownerId,
+                          @Param("expectedVersion") long expectedVersion,
+                          @Param("documentPath") String documentPath,
+                          @Param("pdfPath") String pdfPath,
+                          @Param("historyJson") String historyJson,
+                          @Param("historyPosition") int historyPosition,
+                          @Param("now") LocalDateTime now);
 }

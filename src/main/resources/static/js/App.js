@@ -25,11 +25,15 @@ import AdditionalInfo from "./pages/AdditionalInfo.js";
 import FinalReview from "./pages/FinalReview.js";
 import GenerationProgress from "./pages/GenerationProgress.js";
 import Completed from "./pages/Completed.js";
+import DocumentEditor from "./pages/DocumentEditor.js";
 import MyProjects from "./pages/MyProjects.js";
 import ProjectDetails from "./pages/ProjectDetails.js";
 import Templates from "./pages/Templates.js";
 import Settings from "./pages/Settings.js";
 import Help from "./pages/Help.js";
+import Marketplace from "./pages/Marketplace.js";
+import MarketplaceSell from "./pages/MarketplaceSell.js";
+import MarketplaceListings from "./pages/MarketplaceListings.js";
 
 const WORKFLOW_PAGES = [
   "add-project",
@@ -55,6 +59,11 @@ const ROUTES = new Set([
   "templates",
   "settings",
   "help",
+  "marketplace",
+  "marketplace-sell",
+  "marketplace-listings",
+  "marketplace-moderation",
+  "document-editor",
   ...WORKFLOW_PAGES,
 ]);
 const ACTIVE_GENERATION_STATUSES = new Set([
@@ -101,6 +110,7 @@ const authHomeButtonStyle = {
 
 function pageFromLocation() {
   const route = window.location.hash.slice(1);
+  if (route.startsWith("marketplace/project/") || route.startsWith("marketplace/category/")) return "marketplace";
   return ROUTES.has(route) ? route : "landing";
 }
 
@@ -228,6 +238,7 @@ function AppInner() {
   const previewErrorRef = useRef("");
   const authReadyRef = useRef(false);
   const authenticatedRef = useRef(false);
+  const pendingRouteRef = useRef(sessionStorage.getItem("docgen-post-auth-route"));
   const [appState, setAppState] = useState(restoreAppState);
   const restoredAppStateRef = useRef(appState);
   const appStateRef = useRef(appState);
@@ -267,6 +278,16 @@ function AppInner() {
     [onState],
   );
   const setPage = useCallback((nextPage, { replace = false } = {}) => {
+    if (
+      authReadyRef.current &&
+      !authenticatedRef.current &&
+      ["marketplace-sell", "marketplace-listings", "marketplace-moderation"].includes(nextPage)
+    ) {
+      pendingRouteRef.current = nextPage;
+      sessionStorage.setItem("docgen-post-auth-route", nextPage);
+      nextPage = "login";
+      replace = true;
+    }
     if (!ROUTES.has(nextPage)) return;
     pageRef.current = nextPage;
     const nextUrl = `${window.location.pathname}${window.location.search}#${nextPage}`;
@@ -290,7 +311,16 @@ function AppInner() {
       if (
         authReadyRef.current &&
         !authenticatedRef.current &&
-        !["landing", "login", "signup"].includes(route)
+        ["marketplace-sell", "marketplace-listings", "marketplace-moderation"].includes(route)
+      ) {
+        pendingRouteRef.current = route;
+        sessionStorage.setItem("docgen-post-auth-route", route);
+        route = "login";
+        window.history.replaceState({ page: route }, "", `${window.location.pathname}${window.location.search}#${route}`);
+      } else if (
+        authReadyRef.current &&
+        !authenticatedRef.current &&
+        !["landing", "login", "signup", "marketplace"].includes(route)
       ) {
         route = "landing";
         window.history.replaceState(
@@ -632,9 +662,17 @@ function AppInner() {
               setPage("completed");
             }
           }
-          if (["landing", "login", "signup"].includes(pageRef.current))
-            setPage("dashboard", { replace: true });
-        } else if (!["landing", "login", "signup"].includes(pageRef.current)) {
+          if (["landing", "login", "signup"].includes(pageRef.current)) {
+            const destination = pendingRouteRef.current || "dashboard";
+            setPage(destination, { replace: true });
+            pendingRouteRef.current = null;
+            sessionStorage.removeItem("docgen-post-auth-route");
+          }
+        } else if (["marketplace-sell", "marketplace-listings", "marketplace-moderation"].includes(pageRef.current)) {
+          pendingRouteRef.current = pageRef.current;
+          sessionStorage.setItem("docgen-post-auth-route", pageRef.current);
+          setPage("login", { replace: true });
+        } else if (!["landing", "login", "signup", "marketplace"].includes(pageRef.current)) {
           setPage("landing", { replace: true });
         }
       } catch (error) {
@@ -648,7 +686,7 @@ function AppInner() {
         if (
           alive &&
           !authenticated &&
-          !["landing", "login", "signup"].includes(pageRef.current)
+          !["landing", "login", "signup", "marketplace"].includes(pageRef.current)
         )
           setPage("landing", { replace: true });
       } finally {
@@ -668,14 +706,18 @@ function AppInner() {
     authenticatedRef.current = true;
     onState({ user: data.user });
     await refreshWorkspace();
-    setPage("dashboard");
+    setPage(pendingRouteRef.current || "dashboard");
+    pendingRouteRef.current = null;
+    sessionStorage.removeItem("docgen-post-auth-route");
   };
   const handleSignup = async (email, name, password) => {
     const data = await api.auth.register(email, name, password);
     authenticatedRef.current = true;
     onState({ user: data.user });
     await refreshWorkspace();
-    setPage("dashboard");
+    setPage(pendingRouteRef.current || "dashboard");
+    pendingRouteRef.current = null;
+    sessionStorage.removeItem("docgen-post-auth-route");
   };
   const handleLogout = async () => {
     await api.auth.logout();
@@ -947,7 +989,16 @@ function AppInner() {
   };
 
   if (!authReady) return null;
-  if (page === "landing") return _jsx(Landing, { onNav: setPage });
+  if (page === "marketplace") return _jsx(Marketplace, { onNav: setPage, state: appState });
+  if (page === "landing") return _jsxs("div", { children: [
+    _jsx(Landing, { onNav: setPage }),
+    _jsx("button", {
+      type: "button",
+      onClick: () => setPage("marketplace"),
+      style: { position: "fixed", right: 18, bottom: 18, zIndex: 40, padding: "12px 17px", border: 0, borderRadius: 999, background: "#172033", color: "#fff", fontWeight: 750, boxShadow: "0 8px 28px rgba(15,23,42,.2)", cursor: "pointer" },
+      children: "Explore free Marketplace",
+    }),
+  ] });
   if (page === "login")
     return _jsx(Login, {
       onNav: setPage,
@@ -1059,7 +1110,9 @@ function AppInner() {
           onResume: resumeWorkflow,
         });
       case "project-details":
-        return _jsx(ProjectDetails, { onNav: setPage, state: appState });
+        return _jsx(ProjectDetails, { onNav: setPage, state: appState, onState });
+      case "document-editor":
+        return _jsx(DocumentEditor, { onNav: setPage, state: appState });
       case "templates":
         return _jsx(Templates, { onNav: setPage, state: appState });
       case "settings":
@@ -1071,6 +1124,12 @@ function AppInner() {
         });
       case "help":
         return _jsx(Help, { onNav: setPage });
+      case "marketplace-sell":
+        return _jsx(MarketplaceSell, { onNav: setPage, state: appState });
+      case "marketplace-listings":
+        return _jsx(MarketplaceListings, { onNav: setPage, state: appState, mode: "seller" });
+      case "marketplace-moderation":
+        return _jsx(MarketplaceListings, { onNav: setPage, state: appState, mode: "moderation" });
       default:
         return _jsx(Dashboard, { onNav: setPage, state: appState });
     }

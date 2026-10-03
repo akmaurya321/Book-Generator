@@ -214,7 +214,8 @@ public class AuthController {
                 user.getName(),
                 user.getEmail(),
                 user.getProvider(),
-                avatarUrl);
+                avatarUrl,
+                user.getRoles());
     }
 
     public record RegisterRequest(
