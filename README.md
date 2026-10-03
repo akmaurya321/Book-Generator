@@ -2,6 +2,8 @@
 
 Book Generator is a Java 21 + Spring Boot application that analyzes a GitHub repository or ZIP project, indexes project evidence in ChromaDB, recommends sections from a predefined global student-report format, and generates validated DOCX and PDF documentation.
 
+Live project link With partial features Working: https://book-generator-mc9p.onrender.com/
+
 ## Core flow
 
 1. Submit GitHub URL or ZIP.
